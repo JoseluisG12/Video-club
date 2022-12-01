@@ -209,10 +209,10 @@ void GenerarLista(FILE *archi){
 
 void menu (){
 	printf("\n-----------------------------------------\n");
-	printf("1:Cargar\n");
-	printf("2:Mostrar\n");
-	printf("3:Buscar codigo\n");
-	printf("4:Eliminar pelicula\n");
+	printf("1:Cargar archivo TITULOS.DAT \n");
+	printf("2:Mostrar catalogo de peliculas \n");
+	printf("3:Buscar codigo de una pelicula\n");
+	printf("4:Eliminar pelicula del archivo \n");
 	printf("5:generar lista\n");
 	printf("-----------------------------------------\n");
 }
@@ -232,5 +232,4 @@ int main(){
 			case 5: GenerarLista(archi);break;
 		}
 	}while(a!=0);
-}
 
