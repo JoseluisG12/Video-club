@@ -1,0 +1,236 @@
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
+
+struct peliculas{
+	int codigo;
+	char titulo[50];
+	char director[50];
+	int stock;
+};
+
+typedef struct nodo *puntero;
+
+struct nodo{
+	char direc[50];
+	int tot;
+	puntero sig;
+};
+
+void Carga(FILE *archi){
+	peliculas a;
+	fpos_t x;
+	archi=fopen("TITULOS.DAT","wb");
+	if(archi==NULL){
+		printf("error\n");
+	}
+	else{
+		printf("Ingresar titulo,finalizar con FIN\n");
+		fflush(stdin);
+		gets(a.titulo);	
+		while(stricmp(a.titulo,"FIN")!=0){
+		fseek(archi,0,SEEK_END);
+		fgetpos(archi,&x);
+		a.codigo=(int)(x/sizeof(peliculas))+1;
+		printf("pelicula codigo: %d\n",a.codigo);
+		printf("Ingresar director\n");
+		fflush(stdin);
+		gets(a.director);
+		printf("Ingresar cantidad de unidades disponibles\n");
+		scanf("%d",&a.stock);
+		fwrite(&a,sizeof(a),1,archi);
+		printf("Ingresar titulo,finalizar con FIN\n");
+		fflush(stdin);
+		gets(a.titulo);		
+		}
+	}
+	fclose(archi);
+}
+
+void Mostrar(FILE *archi){
+	peliculas a;
+	archi=fopen("TITULOS.DAT","rb");
+	if(archi==NULL){
+		printf("error");
+	}
+	else{
+		fread(&a,sizeof(a),1,archi);
+		while(!feof(archi)){
+			printf("\n------------------------------------\n");
+			printf("Codigo: %d\n Titulo: %s\n Director: %s\n Total de unidades disponibles: %d\n",a.codigo,a.titulo,a.director,a.stock);
+			printf("\n------------------------------------\n");
+			fread(&a,sizeof(a),1,archi);
+		}
+	}
+	fclose(archi);
+}
+
+void BuscarCod(FILE *archi){
+	int c;
+	peliculas a;
+	archi=fopen("TITULOS.DAT","r");
+	if(archi==NULL){
+		printf("error");
+	}
+	else{
+		printf("Ingresar codigo a buscar\n");
+		scanf("%d",&c);
+		fseek(archi,(c-1)*sizeof(peliculas),SEEK_SET);
+		fread(&a,sizeof(a),1,archi);
+		printf(" Codigo: %d\n Titulo: %s\n Director: %s\n Total de unidades disponibles: %d\n",a.codigo,a.titulo,a.director,a.stock);
+	}
+	fclose(archi);
+}
+
+typedef char cadena[50];
+
+void Marcar(FILE *archi,cadena t){
+	peliculas a;
+	int b=0;
+	fseek(archi,0,SEEK_SET);
+	fread(&a,sizeof(a),1,archi);
+	while((!feof(archi))&&(b==0)){
+		if(stricmp(a.titulo,t)==0){
+			b=1;
+		}
+		else{
+			fread(&a,sizeof(a),1,archi);
+		}			
+	}
+	if(b==1){
+		printf("Pelicula marcada %d  \n",a.codigo);
+		a.codigo=(-1);
+		fseek(archi,-sizeof(a),SEEK_CUR);
+		fwrite(&a,sizeof(a),1,archi);
+	}else
+		printf("Titulo no encontrado");
+}
+
+void Borrar(FILE *archi, FILE *aux){
+	peliculas a;
+	fseek(archi,0,SEEK_SET);
+	fread(&a,sizeof(a),1,archi);
+	while(!feof(archi)){
+		if(a.codigo!=-1){
+			fwrite(&a,sizeof(a),1,aux);
+		}
+		fread(&a,sizeof(a),1,archi);
+	}
+}
+
+void EliminarTitulo(FILE *archi, FILE *aux){
+	cadena t;
+	fpos_t x;
+	archi=fopen("TITULOS.DAT","r+");
+	if(archi==NULL){
+		printf("error");
+	}
+	else{
+		fseek(archi,0,SEEK_END);
+		fgetpos(archi,&x);
+		printf("Total de peliculas actuales: %d\n", x/sizeof(peliculas));
+		printf("Ingresar titulo de pelicula a eliminar\n");
+		fflush(stdin);
+		gets(t);
+		Marcar(archi,t);
+		aux = fopen("AUXILIAR.DAT","wb");
+		if(aux==NULL)
+			printf("error");
+		else
+			Borrar(archi,aux);
+		fclose(aux);
+		fclose(archi);
+		remove("TITULOS.DAT");
+		rename("AUXILIAR.DAT","TITULOS.DAT");
+		archi=fopen("TITULOS.DAT","r");
+		fseek(archi,0,SEEK_END);
+		fgetpos(archi,&x);
+		printf("Nuevo total de peliculas: %d\n", x/sizeof(peliculas));
+		fclose(archi);
+	}
+}
+
+void Insertar (puntero &xc,peliculas a){
+	puntero nuevo,anterior,p;
+	//printf("entra\n");
+	nuevo=(puntero)malloc(sizeof(nodo));
+	strcpy(nuevo->direc,a.director);
+	nuevo->tot=a.stock;
+	if(xc==NULL){
+		xc=nuevo;
+		nuevo->sig=NULL;
+		//printf("Deja de ser NULL\n");
+	}
+	else{
+		p=xc;
+		while(p!=NULL){
+			anterior=p;
+			p=p->sig;
+		}
+		//printf("sale");
+		if(stricmp(anterior->direc,nuevo->direc)==0){
+				anterior->tot=anterior->tot+nuevo->tot;
+				//printf("asigna\n");
+			}
+		else{
+			anterior->sig=nuevo;
+			nuevo->sig=NULL;
+			//printf("No asigna\n");
+		}
+	}
+}
+
+void MostrarLista(puntero xc){
+	//printf("Ultimo entra\n");
+	while(xc!=NULL){
+		printf("Director: %s, Cantidad de unidades: %d\n", xc->direc, xc->tot);
+		xc=xc->sig;
+	}
+}
+
+
+void GenerarLista(FILE *archi){
+	peliculas a;
+	puntero cabeza=NULL;
+	archi=fopen("TITULOS.DAT","r");
+	if(archi==NULL){
+		printf("error");
+	}
+	else{
+		fread(&a,sizeof(a),1,archi);
+		while(!feof(archi)){
+			Insertar(cabeza,a);
+			fread(&a,sizeof(peliculas),1,archi);
+		}
+		MostrarLista(cabeza);
+	}
+	fclose(archi);
+}
+
+void menu (){
+	printf("\n-----------------------------------------\n");
+	printf("1:Cargar\n");
+	printf("2:Mostrar\n");
+	printf("3:Buscar codigo\n");
+	printf("4:Eliminar pelicula\n");
+	printf("5:generar lista\n");
+	printf("-----------------------------------------\n");
+}
+
+int main(){
+	FILE *archi, *aux;
+	fpos_t x;
+	int a;
+	do{
+		menu();
+		scanf("%d",&a);
+		switch(a){
+			case 1: Carga(archi);break;
+			case 2: Mostrar(archi);break;
+			case 3: BuscarCod(archi);break;
+			case 4: EliminarTitulo(archi, aux);break;
+			case 5: GenerarLista(archi);break;
+		}
+	}while(a!=0);
+}
+
